@@ -4,6 +4,7 @@
 import asyncio
 
 import aiohttp
+import aiohttp.client_exceptions
 from bs4 import BeautifulSoup, SoupStrainer
 
 
@@ -14,7 +15,7 @@ BOOK_STRAINER = SoupStrainer(class_='col-sm-6 product_main') # Warning : Take on
 BOOKS = []
 
 
-# Custom request with error control and logging
+# Custom request with error control
 async def fetch(session: aiohttp.ClientSession, url: str) -> str | None:
     try:
         async with session.get(url) as response:
@@ -22,29 +23,28 @@ async def fetch(session: aiohttp.ClientSession, url: str) -> str | None:
                 html = await response.text()
             else:
                 print(f'Fetch error {response.status} for url : {url}')
+                return None
     except aiohttp.client_exceptions.ClientConnectorError:
-        print('error')
+        print(f'Client connection error')
     else:
         return html
-
+    
 
 # Get url for each category in the home page nav bar
-async def get_category_links(session: aiohttp.ClientSession) -> list | None:
-    html = await fetch(session, BASE_URL)
-    if html:
+async def get_categories_links(session: aiohttp.ClientSession) -> list | None:
+    if html := await fetch(session, BASE_URL):
         nav = SoupStrainer(class_="nav nav-list")
         soup = BeautifulSoup(html, 'html.parser', parse_only=nav)
         categories_links = [link.get('href') for link in soup.findAll('a')]
         return categories_links[1:]
 
 
-# Get links of all books in a category in every pages
+# Get links of all books in every pages for one category 
 async def get_links_by_category(session: aiohttp.ClientSession, category_url: str) -> list | None:
     next_page = True
     links = []
     while next_page:
-        html = await fetch(session, BASE_URL + category_url)
-        if html:
+        if html:= await fetch(session, BASE_URL + category_url):
             soup = BeautifulSoup(html, 'html.parser', parse_only=LINK_STRAINER)
             for line in soup.findAll("h3"):
                 links.append(f"{BASE_URL}catalogue{line.a['href'][8:]}")
@@ -53,7 +53,7 @@ async def get_links_by_category(session: aiohttp.ClientSession, category_url: st
             else:
                 return links
         else:
-            # todo add error
+            print(f'Category url: {category_url} not found')
             next_page = False
 
 
@@ -83,7 +83,7 @@ async def get_data_by_category(session: aiohttp.ClientSession, category_url: str
 
 async def main():
     async with aiohttp.ClientSession() as session:
-        categories = await get_category_links(session)
+        categories = await get_categories_links(session)
         if categories:
             tasks = [get_data_by_category(session, category) for category in categories[:10]] # limiter a 10 pour tests
             await asyncio.gather(*tasks)
