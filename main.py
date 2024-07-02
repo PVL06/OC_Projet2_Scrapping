@@ -123,17 +123,18 @@ async def get_img(session, url, category, title):
             with open(file_path, 'wb') as file:
                 async for chunk in response.content.iter_chunked(10):
                     file.write(chunk)
+        else:
+            print(f'download image of {title} failed')
 
-
-
+# Create and run coroutine
 async def main():
     async with aiohttp.ClientSession() as session:
         if categories := await get_categories_links(session):
             tasks = [get_data_by_category(session, category) for category in categories] # limiteur pour tests
             await asyncio.gather(*tasks)
-            print("Full download complete !")
+            print('Full download complete !')
         else:
-            print('Get categories url failure')
+            print('Get categories urls failure')
 
 
 if __name__ == '__main__':
