@@ -1,21 +1,36 @@
-# todo gerer les erreurs des request et logger, voir si retry ou pas (limiter)
-# todo rajouter en fin de programme si visualisation des erreurs
+import os
+import re
+import csv
 
 import asyncio
-
+import aiofiles
+from aiocsv import AsyncDictWriter
 import aiohttp
 import aiohttp.client_exceptions
 from bs4 import BeautifulSoup, SoupStrainer
 
-
-
+PATH = os.getcwd()
 BASE_URL = "https://books.toscrape.com/"
 LINK_STRAINER = SoupStrainer('section')
-BOOK_STRAINER = SoupStrainer(class_='col-sm-6 product_main') # Warning : Take only the product info, not image link
-BOOKS = []
+FIELDNAMES = [
+    'product_page_url',
+    'universal_ product_code',
+    'title',
+    'price_including_tax',
+    'price_excluding_tax',
+    'number_available',
+    'product_description',
+    'category',
+    'review_rating',
+    'image_url',
+    ]
+
+if not os.path.exists(os.path.join(PATH, 'data')):
+    os.mkdir(os.path.join(PATH, 'data'))
 
 
-# Custom request with error control
+
+# Custom request function with error control
 async def fetch(session: aiohttp.ClientSession, url: str) -> str | None:
     try:
         async with session.get(url) as response:
@@ -39,7 +54,7 @@ async def get_categories_links(session: aiohttp.ClientSession) -> list | None:
         return categories_links[1:]
 
 
-# Get links of all books in every pages for one category 
+# Get link of all books in every page for one category 
 async def get_links_by_category(session: aiohttp.ClientSession, category_url: str) -> list | None:
     next_page = True
     links = []
@@ -57,40 +72,45 @@ async def get_links_by_category(session: aiohttp.ClientSession, category_url: st
             next_page = False
 
 
-# Get title, price and availability for each book in category
+# Get data for each book in category
 async def get_data_by_category(session: aiohttp.ClientSession, category_url: str) -> None:
-    links = await get_links_by_category(session, category_url)
-    if links:
+    if links := await get_links_by_category(session, category_url):
         category_name = category_url.split('/')[-2].split('_')[0]
-        for link in links:
-            html = await fetch(session, link)
-            if html:
-                soup = BeautifulSoup(html, 'html.parser', parse_only=BOOK_STRAINER)
-                title = soup.find('h1').text
-                price = soup.find(class_='price_color').text
-                available = soup.find(class_="instock availability").text.strip()
-                book_data = {'title': title, 'price': price, 'available': available}
-                for key, value in book_data.items():
-                    if not value:
-                        print(f'In category {category_name} the {key} value is not available')
-                        book_data[key] = 'None'
-                BOOKS.append(book_data)
+        async with aiofiles.open(f'data/{category_name}.csv', mode='w', encoding='utf-8', newline='') as csvfile:
+            writer = AsyncDictWriter(csvfile, FIELDNAMES, restval="NULL", quoting=csv.QUOTE_ALL)
+            await writer.writeheader()
+            for link in links:
+                if html := await fetch(session, link):
+                    soup = BeautifulSoup(html, 'html.parser')
+                    table_content = [content.text for content in soup.findAll('td')]
+                    description_title = soup.find(id='product_description')
+                    description = description_title.find_next('p').text if description_title else ''
+                    data = {
+                        'product_page_url': link,
+                        'universal_ product_code': table_content[0],
+                        'title': soup.find('h1').text,
+                        'price_including_tax': table_content[3],
+                        'price_excluding_tax': table_content[2],
+                        'number_available': re.findall(r'\d+', table_content[5])[0],
+                        'product_description': description,
+                        'category': category_name,
+                        'review_rating': table_content[-1],
+                        'image_url': soup.find(class_='item active').find('img')['src'].replace('../../', BASE_URL)
+                    }
+                    await writer.writerow(data)
         print(f'{category_name} download complete !')
     else:
-        # todo log error no links category
-        pass
+        print(f'Get data fail to url {link}')
 
 
 async def main():
     async with aiohttp.ClientSession() as session:
-        categories = await get_categories_links(session)
-        if categories:
-            tasks = [get_data_by_category(session, category) for category in categories[:10]] # limiter a 10 pour tests
+        if categories := await get_categories_links(session):
+            tasks = [get_data_by_category(session, category) for category in categories] # limiteur pour tests
             await asyncio.gather(*tasks)
-            print("Download complete !")
+            print("Full download complete !")
         else:
-            # todo log error
-            pass
+            print('Get categories url failure')
 
 
 if __name__ == '__main__':
