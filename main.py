@@ -113,23 +113,23 @@ async def get_data_by_category(session: aiohttp.ClientSession, category_url: str
     else:
         print(f'Get data fail to url {link}')
 
-
+# Downloading image and save
 async def get_img(session, url, category, title):
-    pattern = re.compile("[:',.#;!?%&()#/* ]")
+    pattern = re.compile("[:',.#;!?%&()#/\"* ]")
     formated_title = pattern.sub('_', title)
     file_path = f'{CURRENT_DATA_PATH}/{category}/{category}_img/{formated_title}.jpg'
-    with open(file_path, mode='wb') as file:
-        async with session.get(url) as response:
-            if response == 200:
-                image = await response.read()
-                file.write(image)
+    async with session.get(url) as response:
+        if response.status == 200:
+            with open(file_path, 'wb') as file:
+                async for chunk in response.content.iter_chunked(10):
+                    file.write(chunk)
 
 
 
 async def main():
     async with aiohttp.ClientSession() as session:
         if categories := await get_categories_links(session):
-            tasks = [get_data_by_category(session, category) for category in categories[:2]] # limiteur pour tests
+            tasks = [get_data_by_category(session, category) for category in categories] # limiteur pour tests
             await asyncio.gather(*tasks)
             print("Full download complete !")
         else:
