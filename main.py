@@ -1,6 +1,7 @@
 import os
 import re
 import csv
+from datetime import datetime
 
 import asyncio
 import aiofiles
@@ -9,7 +10,8 @@ import aiohttp
 import aiohttp.client_exceptions
 from bs4 import BeautifulSoup, SoupStrainer
 
-PATH = os.getcwd()
+DATA_PATH = os.path.join(os.getcwd(), 'data')
+CURRENT_DATA_PATH = os.path.join(DATA_PATH, datetime.now().strftime("%Y%m%d%H%M%S"))
 BASE_URL = "https://books.toscrape.com/"
 LINK_STRAINER = SoupStrainer('section')
 FIELDNAMES = [
@@ -25,9 +27,9 @@ FIELDNAMES = [
     'image_url',
     ]
 
-if not os.path.exists(os.path.join(PATH, 'data')):
-    os.mkdir(os.path.join(PATH, 'data'))
-
+if not os.path.exists(DATA_PATH):
+    os.mkdir(DATA_PATH)
+os.mkdir(CURRENT_DATA_PATH)
 
 
 # Custom request function with error control
@@ -54,7 +56,7 @@ async def get_categories_links(session: aiohttp.ClientSession) -> list | None:
         return categories_links[1:]
 
 
-# Get link of all books in every page for one category 
+# Get link of all books in every page for selected category 
 async def get_links_by_category(session: aiohttp.ClientSession, category_url: str) -> list | None:
     next_page = True
     links = []
@@ -76,37 +78,58 @@ async def get_links_by_category(session: aiohttp.ClientSession, category_url: st
 async def get_data_by_category(session: aiohttp.ClientSession, category_url: str) -> None:
     if links := await get_links_by_category(session, category_url):
         category_name = category_url.split('/')[-2].split('_')[0]
-        async with aiofiles.open(f'data/{category_name}.csv', mode='w', encoding='utf-8', newline='') as csvfile:
+
+        category_path = os.path.join(CURRENT_DATA_PATH, category_name)
+        os.mkdir(category_path)
+        os.mkdir(os.path.join(category_path, category_name + '_img'))
+        file_path = f'{CURRENT_DATA_PATH}/{category_name}/{category_name}.csv'
+
+        async with aiofiles.open(file_path, mode='w', encoding='utf-8', newline='') as csvfile:
             writer = AsyncDictWriter(csvfile, FIELDNAMES, restval="NULL", quoting=csv.QUOTE_ALL)
             await writer.writeheader()
             for link in links:
                 if html := await fetch(session, link):
                     soup = BeautifulSoup(html, 'html.parser')
+                    title = soup.find('h1').text
                     table_content = [content.text for content in soup.findAll('td')]
                     description_title = soup.find(id='product_description')
                     description = description_title.find_next('p').text if description_title else ''
+                    img_url = soup.find(class_='item active').find('img')['src'].replace('../../', BASE_URL)
                     data = {
                         'product_page_url': link,
                         'universal_ product_code': table_content[0],
-                        'title': soup.find('h1').text,
+                        'title': title,
                         'price_including_tax': table_content[3],
                         'price_excluding_tax': table_content[2],
                         'number_available': re.findall(r'\d+', table_content[5])[0],
                         'product_description': description,
                         'category': category_name,
                         'review_rating': table_content[-1],
-                        'image_url': soup.find(class_='item active').find('img')['src'].replace('../../', BASE_URL)
+                        'image_url': img_url
                     }
                     await writer.writerow(data)
+                    await get_img(session, img_url, category_name, title)
         print(f'{category_name} download complete !')
     else:
         print(f'Get data fail to url {link}')
 
 
+async def get_img(session, url, category, title):
+    pattern = re.compile("[:',.#;!?%&()#/* ]")
+    formated_title = pattern.sub('_', title)
+    file_path = f'{CURRENT_DATA_PATH}/{category}/{category}_img/{formated_title}.jpg'
+    with open(file_path, mode='wb') as file:
+        async with session.get(url) as response:
+            if response == 200:
+                image = await response.read()
+                file.write(image)
+
+
+
 async def main():
     async with aiohttp.ClientSession() as session:
         if categories := await get_categories_links(session):
-            tasks = [get_data_by_category(session, category) for category in categories] # limiteur pour tests
+            tasks = [get_data_by_category(session, category) for category in categories[:2]] # limiteur pour tests
             await asyncio.gather(*tasks)
             print("Full download complete !")
         else:
