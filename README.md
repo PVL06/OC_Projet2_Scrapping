@@ -19,15 +19,14 @@ Les fichiers csv utilise la virgule comme séparateur et l'entête ce compose co
 
 ### Prérequis
 
-Python > 3.10
-pip
+Python > 3.10, pip
 
 ### Exécution
 
-'''
+```
 python -m venv .venv
 source .venv/Scripts/activate # for linux os
 ./.venv/Scripts/activate      # for windows os
 pip install -r requirements.txt
 python main.py
-'''
+```

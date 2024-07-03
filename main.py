@@ -90,15 +90,15 @@ async def get_data_by_category(session: aiohttp.ClientSession, category_url: str
             for link in links:
                 if html := await fetch(session, link):
                     soup = BeautifulSoup(html, 'html.parser')
-                    title = soup.find('h1').text
                     table_content = [content.text for content in soup.findAll('td')]
+                    ipc = table_content[0]
                     description_title = soup.find(id='product_description')
                     description = description_title.find_next('p').text if description_title else ''
                     img_url = soup.find(class_='item active').find('img')['src'].replace('../../', BASE_URL)
                     data = {
                         'product_page_url': link,
-                        'universal_ product_code': table_content[0],
-                        'title': title,
+                        'universal_ product_code': ipc,
+                        'title': soup.find('h1').text,
                         'price_including_tax': table_content[3],
                         'price_excluding_tax': table_content[2],
                         'number_available': re.findall(r'\d+', table_content[5])[0],
@@ -108,29 +108,27 @@ async def get_data_by_category(session: aiohttp.ClientSession, category_url: str
                         'image_url': img_url
                     }
                     await writer.writerow(data)
-                    await get_img(session, img_url, category_name, title)
+                    await get_img(session, img_url, category_name, ipc)
         print(f'{category_name} download complete !')
     else:
         print(f'Get data fail to url {link}')
 
 # Downloading image and save
-async def get_img(session, url, category, title):
-    pattern = re.compile("[:',.#;!?%&()#/\"* ]")
-    formated_title = pattern.sub('_', title)
-    file_path = f'{CURRENT_DATA_PATH}/{category}/{category}_img/{formated_title}.jpg'
+async def get_img(session, url, category, ipc):
+    file_path = f'{CURRENT_DATA_PATH}/{category}/{category}_img/{ipc}.jpg'
     async with session.get(url) as response:
         if response.status == 200:
             with open(file_path, 'wb') as file:
                 async for chunk in response.content.iter_chunked(10):
                     file.write(chunk)
         else:
-            print(f'download image of {title} failed')
+            print(f'download image of ipc n°{ipc} failed')
 
 # Create and run coroutine
 async def main():
     async with aiohttp.ClientSession() as session:
         if categories := await get_categories_links(session):
-            tasks = [get_data_by_category(session, category) for category in categories] # limiteur pour tests
+            tasks = [get_data_by_category(session, category) for category in categories[:3]] # limiteur pour tests
             await asyncio.gather(*tasks)
             print('Full download complete !')
         else:
