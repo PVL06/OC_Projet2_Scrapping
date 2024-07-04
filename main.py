@@ -7,8 +7,9 @@ import asyncio
 import aiofiles
 from aiocsv import AsyncDictWriter
 import aiohttp
-import aiohttp.client_exceptions
 from bs4 import BeautifulSoup, SoupStrainer
+
+from utils import fetch, Progress
 
 DATA_PATH = os.path.join(os.getcwd(), 'data')
 CURRENT_DATA_PATH = os.path.join(DATA_PATH, datetime.now().strftime("%Y%m%d%H%M%S"))
@@ -31,21 +32,6 @@ if not os.path.exists(DATA_PATH):
     os.mkdir(DATA_PATH)
 os.mkdir(CURRENT_DATA_PATH)
 
-
-# Custom request function with error control
-async def fetch(session: aiohttp.ClientSession, url: str) -> str | None:
-    try:
-        async with session.get(url) as response:
-            if response.status == 200:
-                html = await response.text()
-            else:
-                print(f'Fetch error {response.status} for url : {url}')
-                return None
-    except aiohttp.client_exceptions.ClientConnectorError:
-        print(f'Client connection error')
-    else:
-        return html
-    
 
 # Get url for each category in the home page nav bar
 async def get_categories_links(session: aiohttp.ClientSession) -> list | None:
@@ -70,12 +56,12 @@ async def get_links_by_category(session: aiohttp.ClientSession, category_url: st
             else:
                 return links
         else:
-            print(f'Category url: {category_url} not found')
+            print(f'Category url: {category_url} not found\n')
             next_page = False
 
 
 # Get data for each book in category
-async def get_data_by_category(session: aiohttp.ClientSession, category_url: str) -> None:
+async def get_data_by_category(session: aiohttp.ClientSession, category_url: str, progress: Progress) -> None:
     if links := await get_links_by_category(session, category_url):
         category_name = category_url.split('/')[-2].split('_')[0]
 
@@ -109,9 +95,9 @@ async def get_data_by_category(session: aiohttp.ClientSession, category_url: str
                     }
                     await writer.writerow(data)
                     await get_img(session, img_url, category_name, ipc)
-        print(f'{category_name} download complete !')
+        progress.up()
     else:
-        print(f'Get data fail to url {link}')
+        print(f'Get data fail to url {link}\n')
 
 # Downloading image and save
 async def get_img(session, url, category, ipc):
@@ -122,17 +108,20 @@ async def get_img(session, url, category, ipc):
                 async for chunk in response.content.iter_chunked(10):
                     file.write(chunk)
         else:
-            print(f'download image of ipc n°{ipc} failed')
+            print(f'download image of ipc n°{ipc} failed\n')
 
 # Create and run coroutine
 async def main():
     async with aiohttp.ClientSession() as session:
+        print('Get all categories...')
         if categories := await get_categories_links(session):
-            tasks = [get_data_by_category(session, category) for category in categories[:3]] # limiteur pour tests
+            print('Download and save all books data and images...')
+            progress_bar = Progress('Download and save', len(categories))
+            tasks = [get_data_by_category(session, category, progress_bar) for category in categories] # limiteur pour tests
             await asyncio.gather(*tasks)
-            print('Full download complete !')
+            print('Books scrapping complete !')
         else:
-            print('Get categories urls failure')
+            print('Get categories urls failure\n')
 
 
 if __name__ == '__main__':
