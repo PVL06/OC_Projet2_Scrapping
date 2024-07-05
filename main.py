@@ -42,7 +42,7 @@ async def get_categories_links(session: aiohttp.ClientSession) -> list | None:
         return categories_links[1:]
 
 
-# Get link of all books in every page for selected category 
+# Get url of all books in every page for selected category 
 async def get_links_by_category(session: aiohttp.ClientSession, category_url: str) -> list | None:
     next_page = True
     links = []
@@ -60,7 +60,7 @@ async def get_links_by_category(session: aiohttp.ClientSession, category_url: st
             next_page = False
 
 
-# Get data for each book in category
+# Get data for each book in a category, save data to csv file, and save images
 async def get_data_by_category(session: aiohttp.ClientSession, category_url: str, progress: Progress) -> None:
     if links := await get_links_by_category(session, category_url):
         category_name = category_url.split('/')[-2].split('_')[0]
@@ -119,7 +119,7 @@ async def main():
             progress_bar = Progress('Download and save', len(categories))
             tasks = [get_data_by_category(session, category, progress_bar) for category in categories] # limiteur pour tests
             await asyncio.gather(*tasks)
-            print('Books scrapping complete !')
+            print('Books scraping complete !')
         else:
             print('Get categories urls failure\n')
 
