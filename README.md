@@ -1,32 +1,53 @@
-# OC_Projet2
+# OC_Projet2 - Extraction, Transformation et Chargement de données d'un site de vente de livres
 
-## Projet 2 de la formation OpenClassRooms developpeur Python
+Ce projet Python implémente un processus ETL (Extract, Transform, Load) pour récupérer des données à partir d'un site web de vente de livres fictif ([bookstoscrape](https://books.toscrape.com/)), les transformer et les stocker en local.
 
-### Présentation
-Le but est d'automatiser la récupération des données du site "Books to Scrape", fake site de vente en ligne de livre, via un programme de scrapping.
-A chaque exéctution du programme les données sont stockées dans un dossier "data/id" ou id représente la date et l'heure au format compressé lors du lancement.
-A l'interieur se trouve un dossier pour chaque catégorie qui contient un fichier csv et un dossier contenant toute les images de couverture au format jpg.
-Les fichiers csv utilise la virgule comme séparateur et l'entête ce compose comme suit:
-    ● universal_ product_code
-    ● title
-    ● price_including_tax
-    ● price_excluding_tax
-    ● number_available
-    ● product_description
-    ● category
-    ● review_rating
-    ● image_url
+## Fonctionnalités
 
-### Prérequis
+- Extraction de données à partir du site web de vente de livres
+- Transformation des données pour assurer la cohérence et la qualité
+- Chargement des données transformées dans un dossier local
 
-Python > 3.10, pip
+## Installation
 
-### Exécution
+1. Cloner le repository :
 
+```bash
+git clone https://github.com/PVL06/OC_Projet2.git
+cd OC_Projet2
 ```
-python -m venv .venv
-source .venv/Scripts/activate # for linux os
-./.venv/Scripts/activate      # for windows os
+
+2. Créer et activer un environnement virtuel Python (venv) :
+
+Si vous n'avez pas venv installé, vous pouvez l'installer en exécutant :
+
+```bash
+python -m venv venv
+```
+Pour activer l'environnement virtuel sur Windows, exécutez :
+```bash
+venv\Scripts\activate
+```
+Sur macOS et Linux, exécutez :
+```bash
+source venv/bin/activate
+```
+
+3. Installer les dépendances :
+
+Utilisez pip (ou pip3 pour Python 3) pour installer les bibliothèques nécessaires :
+```bash
 pip install -r requirements.txt
+```
+
+## Utilisation
+
+Exécuter le script principal pour lancer le processus ETL :
+```bash
 python main.py
 ```
+
+## Données
+
+A chaque lancement du programme un nouveau dossier est crée dans le dossier data qui est a la racine du projet, il a pour nom la date et l'heure de l'execution dans un format compressé.
+A l'interieur se trouve un dossier par categorie qui contienne chacun un fichier csv de la categorie et un dossier contenant les images de couverture.
