@@ -2,7 +2,8 @@ import aiohttp
 import aiohttp.client_exceptions
 
 
-### Custom request function with error control ###
+''' Custom request function with error control '''
+
 
 async def fetch(session: aiohttp.ClientSession, url: str) -> str | None:
     try:
@@ -18,7 +19,8 @@ async def fetch(session: aiohttp.ClientSession, url: str) -> str | None:
         return html
     
 
-### Custum progress bar ###
+''' Custom progress bar '''
+
 
 class Format:
     """ Colors """
@@ -29,14 +31,15 @@ class Format:
     DARK_SHADE = '\u2593'
     LIGHT_SHADE = '\u2591'
     """ Line """
-    LINE_UP = '\x1B[NA' #replace N by number of lines
+    # replace N by number of lines
+    LINE_UP = '\x1B[NA'
     """ Status """
     RUN = f'{PURPLE}[RUN.....] {END}'
     COMPLETE = f'{GREEN}[COMPLETE] {END}'
 
 
 class Bar(Format):
-    def __init__(self, title: str, total_step: int, width: int=50) -> None:
+    def __init__(self, title: str, total_step: int, width: int = 50) -> None:
         self.title = title.capitalize()
         self.total_step = total_step
         self.width = width
@@ -63,7 +66,7 @@ class Bar(Format):
             
 
 class Progress:
-    def __init__(self, title: str, total_step: int, width: int=50) -> None:
+    def __init__(self, title: str, total_step: int, width: int = 50) -> None:
         self.bar = Bar(title, total_step, width)
 
     def up(self) -> None:
