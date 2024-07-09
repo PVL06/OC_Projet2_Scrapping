@@ -23,17 +23,17 @@ async def fetch(session: aiohttp.ClientSession, url: str) -> str | None:
 
 
 class Format:
-    """ Colors """
+    # Colors
     GREEN = '\033[0;32m'
     PURPLE = "\033[0;35m"
     END = "\033[0m"
-    """ Cursors """
+    # Cursors
     DARK_SHADE = '\u2593'
     LIGHT_SHADE = '\u2591'
-    """ Line """
+    # Line cursor
     # replace N by number of lines
     LINE_UP = '\x1B[NA'
-    """ Status """
+    # Status
     RUN = f'{PURPLE}[RUN.....] {END}'
     COMPLETE = f'{GREEN}[COMPLETE] {END}'
 
