@@ -33,7 +33,7 @@ if not os.path.exists(DATA_PATH):
 os.mkdir(CURRENT_DATA_PATH)
 
 
-# Get url for each category in the home page nav bar
+# Function to get url for each category in the home page navigation bar
 async def get_categories_links(session: aiohttp.ClientSession) -> list | None:
     if html := await fetch(session, BASE_URL):
         nav = SoupStrainer(class_="nav nav-list")
@@ -42,15 +42,16 @@ async def get_categories_links(session: aiohttp.ClientSession) -> list | None:
         return categories_links[1:]
 
 
-# Get url of all books in every page for selected category 
+# Function to get url of all books in every page for selected category
 async def get_links_by_category(session: aiohttp.ClientSession, category_url: str) -> list | None:
     next_page = True
     links = []
     while next_page:
-        if html:= await fetch(session, BASE_URL + category_url):
+        if html := await fetch(session, BASE_URL + category_url):
             soup = BeautifulSoup(html, 'html.parser', parse_only=LINK_STRAINER)
             for line in soup.findAll("h3"):
                 links.append(f"{BASE_URL}catalogue{line.a['href'][8:]}")
+            # check if other pages exist
             if next_page := soup.find(class_='next'):
                 category_url = "/".join(category_url.split('/')[:-1]) + f"/{next_page.a['href']}"
             else:
@@ -60,30 +61,29 @@ async def get_links_by_category(session: aiohttp.ClientSession, category_url: st
             next_page = False
 
 
-# Get data for each book in a category, save data to csv file, and save images
+# Function to get data for each book in a category, save data to csv file, and save images
 async def get_data_by_category(session: aiohttp.ClientSession, category_url: str, progress: Progress) -> None:
     if links := await get_links_by_category(session, category_url):
         category_name = category_url.split('/')[-2].split('_')[0]
 
+        # create directory for images and define path of csv file
         category_path = os.path.join(CURRENT_DATA_PATH, category_name)
         os.mkdir(category_path)
         os.mkdir(os.path.join(category_path, category_name + '_img'))
-        file_path = f'{CURRENT_DATA_PATH}/{category_name}/{category_name}.csv'
+        csv_path = f'{CURRENT_DATA_PATH}/{category_name}/{category_name}.csv'
 
-        async with aiofiles.open(file_path, mode='w', encoding='utf-8', newline='') as csvfile:
+        async with aiofiles.open(csv_path, mode='w', encoding='utf-8', newline='') as csvfile:
             writer = AsyncDictWriter(csvfile, FIELDNAMES, restval="NULL", quoting=csv.QUOTE_ALL)
             await writer.writeheader()
             for link in links:
                 if html := await fetch(session, link):
                     soup = BeautifulSoup(html, 'html.parser')
                     table_content = [content.text for content in soup.findAll('td')]
-                    ipc = table_content[0]
                     description_title = soup.find(id='product_description')
                     description = description_title.find_next('p').text if description_title else ''
-                    img_url = soup.find(class_='item active').find('img')['src'].replace('../../', BASE_URL)
                     data = {
                         'product_page_url': link,
-                        'universal_ product_code': ipc,
+                        'universal_ product_code': table_content[0],
                         'title': soup.find('h1').text,
                         'price_including_tax': table_content[3],
                         'price_excluding_tax': table_content[2],
@@ -91,16 +91,22 @@ async def get_data_by_category(session: aiohttp.ClientSession, category_url: str
                         'product_description': description,
                         'category': category_name,
                         'review_rating': table_content[-1],
-                        'image_url': img_url
+                        'image_url': soup.find(class_='item active').find('img')['src'].replace('../../', BASE_URL)
                     }
-                    await writer.writerow(data)
-                    await get_img(session, img_url, category_name, ipc)
+                    await save_data(session, writer, data)
         progress.up()
     else:
-        print(f'Get data fail to url {link}\n')
+        print(f'Get data fail to url {category_url}\n')
 
-# Downloading image and save
-async def get_img(session, url, category, ipc):
+
+# Function to save data to csv and download image
+async def save_data(session: aiohttp.ClientSession, writer: aiofiles, data: dict) -> None:
+    # add new data in csv file
+    await writer.writerow(data)
+    # download image
+    url = data.get('image_url')
+    category = data.get('category')
+    ipc = data.get('universal_ product_code')
     file_path = f'{CURRENT_DATA_PATH}/{category}/{category}_img/{ipc}.jpg'
     async with session.get(url) as response:
         if response.status == 200:
@@ -110,14 +116,15 @@ async def get_img(session, url, category, ipc):
         else:
             print(f'download image of ipc n°{ipc} failed\n')
 
+
 # Create and run coroutine
 async def main():
     async with aiohttp.ClientSession() as session:
         print('Get all categories...')
         if categories := await get_categories_links(session):
-            print('Download and save all books data and images...')
+            print('Download and save all books data and images.')
             progress_bar = Progress('Download and save', len(categories))
-            tasks = [get_data_by_category(session, category, progress_bar) for category in categories] # limiteur pour tests
+            tasks = [get_data_by_category(session, category, progress_bar) for category in categories]
             await asyncio.gather(*tasks)
             print('Books scraping complete !')
         else:
