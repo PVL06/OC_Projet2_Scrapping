@@ -33,7 +33,7 @@ if not os.path.exists(DATA_PATH):
 os.mkdir(CURRENT_DATA_PATH)
 
 
-# Function to get url for each category in the home page navigation bar
+# Function to get the URL for each category in the homepage navigation bar
 async def get_categories_links(session: aiohttp.ClientSession) -> list | None:
     if html := await fetch(session, BASE_URL):
         nav = SoupStrainer(class_="nav nav-list")
@@ -61,12 +61,12 @@ async def get_links_by_category(session: aiohttp.ClientSession, category_url: st
             next_page = False
 
 
-# Function to get data for each book in a category, save data to csv file, and save images
+# Function to get data for each book in a category, save the data to a CSV file, and save the images
 async def get_data_by_category(session: aiohttp.ClientSession, category_url: str, progress: Progress) -> None:
     if links := await get_links_by_category(session, category_url):
         category_name = category_url.split('/')[-2].split('_')[0]
 
-        # create directory for images and define path of csv file
+        # Create a directory for images and define the path of the CSV file
         category_path = os.path.join(CURRENT_DATA_PATH, category_name)
         os.mkdir(category_path)
         os.mkdir(os.path.join(category_path, category_name + '_img'))
@@ -99,9 +99,9 @@ async def get_data_by_category(session: aiohttp.ClientSession, category_url: str
         print(f'Get data fail to url {category_url}\n')
 
 
-# Function to save data to csv and download image
+# Function to save data to a CSV file and download images
 async def save_data(session: aiohttp.ClientSession, writer: aiofiles, data: dict) -> None:
-    # add new data in csv file
+    # add new data to csv file
     await writer.writerow(data)
     # download image
     url = data.get('image_url')
@@ -111,14 +111,19 @@ async def save_data(session: aiohttp.ClientSession, writer: aiofiles, data: dict
     async with session.get(url) as response:
         if response.status == 200:
             with open(file_path, 'wb') as file:
-                async for chunk in response.content.iter_chunked(10):
+                async for chunk in response.content.iter_chunked(1024):
                     file.write(chunk)
         else:
             print(f'download image of ipc n°{ipc} failed\n')
 
 
-# Create and run coroutine
 async def main():
+    """
+    Main function to asynchronously fetch and process book data from multiple categories.
+    - Establishes an HTTP session using aiohttp.
+    - Retrieves all category links.
+    - Downloads and saves book data and images for each category.
+    """ 
     async with aiohttp.ClientSession() as session:
         print('Get all categories...')
         if categories := await get_categories_links(session):
