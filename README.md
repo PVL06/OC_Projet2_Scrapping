@@ -1,6 +1,6 @@
-# OC_Projet2 - Extraction, Transformation et Chargement de données d'un site de vente de livres
+# OC_Projet2 - Processus ETL d'un site de vente de livres
 
-Ce projet Python implémente un processus ETL (Extract, Transform, Load) pour récupérer des données à partir d'un site web de vente de livres fictif ([bookstoscrape](https://books.toscrape.com/)), les transformer et les stocker en local.
+Ce projet Python implémente un processus ETL (Extract, Transform, Load) pour extraire des données à partir d'un site web de vente de livres fictif ([bookstoscrape](https://books.toscrape.com/)), les transformer et les stocker en local.
 
 ## Fonctionnalités
 
@@ -22,15 +22,15 @@ cd OC_Projet2
 Si vous n'avez pas venv installé, vous pouvez l'installer en exécutant :
 
 ```bash
-python -m venv venv
+python -m venv env
 ```
 Pour activer l'environnement virtuel sur Windows, exécutez :
 ```bash
-venv\Scripts\activate
+env\Scripts\activate
 ```
 Sur macOS et Linux, exécutez :
 ```bash
-source venv/bin/activate
+source env/bin/activate
 ```
 
 3. Installer les dépendances :
