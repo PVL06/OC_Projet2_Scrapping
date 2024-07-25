@@ -106,7 +106,7 @@ async def save_data(session: aiohttp.ClientSession, writer: aiofiles, data: dict
     # download image
     url = data.get('image_url')
     category = data.get('category')
-    ipc = data.get('universal_ product_code')
+    ipc = data.get('universal_product_code')
     file_path = f'{CURRENT_DATA_PATH}/{category}/{category}_img/{ipc}.jpg'
     async with session.get(url) as response:
         if response.status == 200:
