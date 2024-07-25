@@ -12,12 +12,12 @@ from bs4 import BeautifulSoup, SoupStrainer
 from utils import fetch, Progress
 
 DATA_PATH = os.path.join(os.getcwd(), 'data')
-CURRENT_DATA_PATH = os.path.join(DATA_PATH, datetime.now().strftime("%Y%m%d%H%M%S"))
+CURRENT_DATA_PATH = os.path.join(DATA_PATH, datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
 BASE_URL = "https://books.toscrape.com/"
 LINK_STRAINER = SoupStrainer('section')
 FIELDNAMES = [
     'product_page_url',
-    'universal_ product_code',
+    'universal_product_code',
     'title',
     'price_including_tax',
     'price_excluding_tax',
@@ -83,7 +83,7 @@ async def get_data_by_category(session: aiohttp.ClientSession, category_url: str
                     description = description_title.find_next('p').text if description_title else ''
                     data = {
                         'product_page_url': link,
-                        'universal_ product_code': table_content[0],
+                        'universal_product_code': table_content[0],
                         'title': soup.find('h1').text,
                         'price_including_tax': table_content[3],
                         'price_excluding_tax': table_content[2],
