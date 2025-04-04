@@ -1,3 +1,4 @@
+![AIOHTTP Badge](https://img.shields.io/badge/AIOHTTP-2C5BB4?logo=aiohttp&logoColor=fff&style=flat) ![Beautiful soup Badge](https://shields.io/badge/BeautifulSoup-4-green)
 # OC_Projet2 - Processus ETL d'un site de vente de livres
 
 Ce projet Python implémente un processus ETL (Extract, Transform, Load) pour extraire des données à partir d'un site web de vente de livres fictif ([bookstoscrape](https://books.toscrape.com/)), les transformer et les stocker en local.
@@ -18,8 +19,6 @@ cd OC_Projet2
 ```
 
 2. Créer et activer un environnement virtuel Python (venv) :
-
-Si vous n'avez pas venv installé, vous pouvez l'installer en exécutant :
 
 ```bash
 python -m venv env
